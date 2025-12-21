@@ -1,3 +1,4 @@
+// index.js - Increase global limit
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
@@ -12,7 +13,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 job.start();
-app.use(express.json());
+
+// INCREASE LIMIT HERE
+app.use(express.json({ limit: "10mb" })); // Changed from default ~1MB
 app.use(cors());
 
 app.use("/api/auth", authRoutes);
