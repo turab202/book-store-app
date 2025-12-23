@@ -17,7 +17,11 @@
       }
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.turab202.bookstore",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "icon": "./assets/images/icon.png",
@@ -35,11 +39,17 @@
     },
     "plugins": [
       "expo-router"
-      // REMOVED: expo-splash-screen plugin
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c0b0f0b3-b89f-4e6f-af85-a05a05782a29"
+      }
+    },
+    "owner": "turab202"
   }
 }
