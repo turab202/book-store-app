@@ -9,7 +9,10 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "API_URL": "https://book-store-app-syng.onrender.com"
+      }
     },
     "production": {
       "autoIncrement": true
