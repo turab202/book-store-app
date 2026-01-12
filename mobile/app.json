@@ -60,6 +60,12 @@
         "projectId": "c0b0f0b3-b89f-4e6f-af85-a05a05782a29"
       }
     },
-    "owner": "turab202"
+    "owner": "turab202",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c0b0f0b3-b89f-4e6f-af85-a05a05782a29"
+    }
   }
 }

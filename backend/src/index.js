@@ -1,4 +1,3 @@
-// index.js - Increase global limit
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
@@ -12,16 +11,27 @@ import { connectDB } from "./lib/db.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Start cron jobs
 job.start();
 
-// INCREASE LIMIT HERE
-app.use(express.json({ limit: "10mb" })); // Changed from default ~1MB
+// Middleware
+app.use(express.json({ limit: "10mb" }));
 app.use(cors());
 
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/books", bookRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  connectDB();
-});
+// ✅ Connect to MongoDB first
+connectDB()
+  .then(() => {
+    console.log("MongoDB connected");
+
+    // Then start server
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("MongoDB connection failed:", err);
+  });
