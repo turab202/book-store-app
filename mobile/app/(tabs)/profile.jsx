@@ -26,17 +26,10 @@ export default function Profile() {
   const [refreshing, setRefreshing] = useState(false);
   const [deleteBookId, setDeleteBookId] = useState(null);
 
-  const { token, logout } = useAuthStore();
+  const { token } = useAuthStore();
   const router = useRouter();
 
   const fetchData = async () => {
-    if (!token) {
-      // User is logged out, skip fetching
-      setIsLoading(false);
-      setBooks([]); // clear previous books
-      return;
-    }
-
     try {
       setIsLoading(true);
       const response = await fetch(`${API_URL}/books/user`, {
@@ -46,13 +39,7 @@ export default function Profile() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to fetch user books");
 
-      // Make sure images are handled properly
-      const booksWithUri = data.map((book) => ({
-        ...book,
-        image: { uri: book.image }, // assuming book.image is a URL string
-      }));
-
-      setBooks(booksWithUri);
+      setBooks(data);
     } catch (error) {
       console.error("Error fetching data:", error);
       Alert.alert("Error", "Failed to load profile data. Pull down to refresh.");
@@ -61,24 +48,18 @@ export default function Profile() {
     }
   };
 
-  // Initial fetch on mount
+  // Initial fetch on component mount
   useEffect(() => {
     fetchData();
-  }, [token]);
+  }, []);
 
-  // Refetch on screen focus
+  // Refetch data every time the screen comes into focus
+  // This fixes the issue where newly added books don't show up
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [token])
+    }, [token]) // Re-run if token changes
   );
-
-  // Handle logout
-  const handleLogout = () => {
-    logout(); // clear token
-    setBooks([]); // clear profile data
-    router.replace("/login"); // redirect to login page
-  };
 
   const handleDeleteBook = async (bookId) => {
     try {
@@ -102,14 +83,10 @@ export default function Profile() {
   };
 
   const confirmDelete = (bookId) => {
-    Alert.alert(
-      "Delete Recommendation",
-      "Are you sure you want to delete this recommendation?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => handleDeleteBook(bookId) },
-      ]
-    );
+    Alert.alert("Delete Recommendation", "Are you sure you want to delete this recommendation?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => handleDeleteBook(bookId) },
+    ]);
   };
 
   const renderBookItem = ({ item }) => (
@@ -162,7 +139,7 @@ export default function Profile() {
   return (
     <View style={styles.container}>
       <ProfileHeader />
-      <LogoutButton onPress={handleLogout} />
+      <LogoutButton />
 
       {/* YOUR RECOMMENDATIONS */}
       <View style={styles.booksHeader}>
