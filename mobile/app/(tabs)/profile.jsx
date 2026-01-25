@@ -17,8 +17,8 @@ import LogoutButton from "../../components/LogoutButton";
 import { Ionicons } from "@expo/vector-icons";
 import COLORS from "../../constants/colors";
 import { Image } from "expo-image";
-import { sleep } from ".";
 import Loader from "../../components/Loader";
+import { sleep } from ".";
 
 export default function Profile() {
   const [books, setBooks] = useState([]);
@@ -29,51 +29,64 @@ export default function Profile() {
   const { token } = useAuthStore();
   const router = useRouter();
 
+  // ================= FETCH USER DATA =================
   const fetchData = async () => {
+    // 🚨 STOP if user is logged out
+    if (!token) {
+      setBooks([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
+
       const response = await fetch(`${API_URL}/books/user`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to fetch user books");
+      if (!response.ok) throw new Error(data.message || "Failed to fetch books");
 
       setBooks(data);
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Profile fetch error:", error);
       Alert.alert("Error", "Failed to load profile data. Pull down to refresh.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Initial fetch on component mount
+  // ================= INITIAL LOAD =================
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (token) fetchData();
+  }, [token]);
 
-  // Refetch data every time the screen comes into focus
-  // This fixes the issue where newly added books don't show up
+  // ================= SCREEN FOCUS =================
   useFocusEffect(
     useCallback(() => {
-      fetchData();
-    }, [token]) // Re-run if token changes
+      if (token) fetchData();
+    }, [token])
   );
 
+  // ================= DELETE BOOK =================
   const handleDeleteBook = async (bookId) => {
     try {
       setDeleteBookId(bookId);
 
       const response = await fetch(`${API_URL}/books/${bookId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to delete book");
+      if (!response.ok) throw new Error(data.message || "Delete failed");
 
-      setBooks(books.filter((book) => book._id !== bookId));
+      setBooks((prev) => prev.filter((book) => book._id !== bookId));
       Alert.alert("Success", "Recommendation deleted successfully");
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to delete recommendation");
@@ -83,34 +96,21 @@ export default function Profile() {
   };
 
   const confirmDelete = (bookId) => {
-    Alert.alert("Delete Recommendation", "Are you sure you want to delete this recommendation?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => handleDeleteBook(bookId) },
-    ]);
+    Alert.alert(
+      "Delete Recommendation",
+      "Are you sure you want to delete this recommendation?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => handleDeleteBook(bookId),
+        },
+      ]
+    );
   };
 
-  const renderBookItem = ({ item }) => (
-    <View style={styles.bookItem}>
-      <Image source={item.image} style={styles.bookImage} />
-      <View style={styles.bookInfo}>
-        <Text style={styles.bookTitle}>{item.title}</Text>
-        <View style={styles.ratingContainer}>{renderRatingStars(item.rating)}</View>
-        <Text style={styles.bookCaption} numberOfLines={2}>
-          {item.caption}
-        </Text>
-        <Text style={styles.bookDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-      </View>
-
-      <TouchableOpacity style={styles.deleteButton} onPress={() => confirmDelete(item._id)}>
-        {deleteBookId === item._id ? (
-          <ActivityIndicator size="small" color={COLORS.primary} />
-        ) : (
-          <Ionicons name="trash-outline" size={20} color={COLORS.primary} />
-        )}
-      </TouchableOpacity>
-    </View>
-  );
-
+  // ================= RENDER STARS =================
   const renderRatingStars = (rating) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -127,7 +127,45 @@ export default function Profile() {
     return stars;
   };
 
+  // ================= RENDER BOOK =================
+  const renderBookItem = ({ item }) => (
+    <View style={styles.bookItem}>
+      <Image source={item.image} style={styles.bookImage} />
+
+      <View style={styles.bookInfo}>
+        <Text style={styles.bookTitle}>{item.title}</Text>
+        <View style={styles.ratingContainer}>
+          {renderRatingStars(item.rating)}
+        </View>
+        <Text style={styles.bookCaption} numberOfLines={2}>
+          {item.caption}
+        </Text>
+        <Text style={styles.bookDate}>
+          {new Date(item.createdAt).toLocaleDateString()}
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={() => confirmDelete(item._id)}
+      >
+        {deleteBookId === item._id ? (
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        ) : (
+          <Ionicons
+            name="trash-outline"
+            size={20}
+            color={COLORS.primary}
+          />
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
+  // ================= PULL TO REFRESH =================
   const handleRefresh = async () => {
+    if (!token) return;
+
     setRefreshing(true);
     await sleep(500);
     await fetchData();
@@ -141,12 +179,13 @@ export default function Profile() {
       <ProfileHeader />
       <LogoutButton />
 
-      {/* YOUR RECOMMENDATIONS */}
+      {/* HEADER */}
       <View style={styles.booksHeader}>
         <Text style={styles.booksTitle}>Your Recommendations 📚</Text>
         <Text style={styles.booksCount}>{books.length} books</Text>
       </View>
 
+      {/* LIST */}
       <FlatList
         data={books}
         renderItem={renderBookItem}
@@ -163,10 +202,19 @@ export default function Profile() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="book-outline" size={50} color={COLORS.textSecondary} />
+            <Ionicons
+              name="book-outline"
+              size={50}
+              color={COLORS.textSecondary}
+            />
             <Text style={styles.emptyText}>No recommendations yet</Text>
-            <TouchableOpacity style={styles.addButton} onPress={() => router.push("/create")}>
-              <Text style={styles.addButtonText}>Add Your First Book</Text>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push("/create")}
+            >
+              <Text style={styles.addButtonText}>
+                Add Your First Book
+              </Text>
             </TouchableOpacity>
           </View>
         }
